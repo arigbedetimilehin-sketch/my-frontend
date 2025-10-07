@@ -1,0 +1,76 @@
+/*
+|--------------------------------------------------------------------------
+| 1. GLOBAL CSS VARIABLES & CUSTOM STYLES (NO Tailwind involved yet)
+|--------------------------------------------------------------------------
+*/
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+html,
+body {
+  /* Use max-width for responsive design */
+  max-width: 100vw;
+  /* Hides horizontal scroll bar if content exceeds viewport */
+  overflow-x: hidden;
+}
+
+body {
+  /* Apply CSS variables for color, which correctly handle light/dark mode */
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    /* Tells the browser to render scrollbars, form inputs, etc., with dark colors */
+    color-scheme: dark;
+  }
+}
+
+/*
+|--------------------------------------------------------------------------
+| 2. TAILWIND DIRECTIVES
+|--------------------------------------------------------------------------
+| These MUST be placed at the top of your file to allow Tailwind to inject
+| its base styles, components, and utilities.
+*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+|--------------------------------------------------------------------------
+| 3. CUSTOM TAILWIND OVERRIDES (Optional)
+|--------------------------------------------------------------------------
+| This section is for custom classes, or if you need to override existing
+| Tailwind utilities for specific components.
+*/
+
+/* * REMOVED CONFLICT: 
+* The original body { @apply bg-slate-900 text-white; } 
+* was removed because it conflicts with the CSS variables defined above
+* and will break your custom dark/light mode logic. 
+*/
