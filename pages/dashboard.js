@@ -1,35 +1,29 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
-import Link from 'next/link'
+import { useEffect, useState } from 'react';
+import { supabase } from '../supabaseClient'; // adjust path if needed
 
 export default function Dashboard() {
-  const [session, setSession] = useState(null)
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data } = await supabase.auth.getSession()
-      setSession(data.session)
-    }
-    getSession()
-  }, [])
+    const fetchData = async () => {
+      const { data: tableData, error } = await supabase.from('your_table').select('*');
+      if (error) console.error(error);
+      else setData(tableData);
+      setLoading(false);
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) return <p>Loading...</p>;
 
   return (
     <div>
-      <h1>EchoSignal Cloud</h1>
-      {session ? (
-        <p>Welcome {session?.user?.email}</p>
-      ) : (
-        <p>Loading...</p>
-      )}
-
-      <h2 style={{ color: 'red' }}>Features (test)</h2>
-      <p style={{ color: 'blue' }}>DEBUG: This should always show</p>
-
-      <ul>
-        <li>
-          <Link href="/deadman">Deadman Fingers</Link>
-        </li>
-      </ul>
+      <h1>Dashboard</h1>
+      {data.map((item) => (
+        <p key={item.id}>{item.name}</p> // change fields to match your table
+      ))}
     </div>
-  )
+  );
 }
