@@ -1,78 +1,93 @@
-import React, { useEffect } from "react";
-import { decryptWithKey } from "../../utils/crypto";
-import useDirectChat from "./useChat";
+// pages/dashboard.jsx
+import { useState, useEffect } from "react";
+import { supabase } from "../supabaseClient";
+import ChatWindow from "../components/Chat/ChatWindow.jsx";
 
-export default function MessageList({ user, otherUser, sharedKey }) {
-  const { messages, markMessagesAsRead } = useDirectChat(user, otherUser?.id);
+export default function Dashboard() {
+  const [user, setUser] = useState(null);
+  const [otherUser, setOtherUser] = useState(null);
+  const [profiles, setProfiles] = useState([]);
 
+  // 🔹 Load the logged-in user
   useEffect(() => {
-    if (user?.id && otherUser?.id) {
-      markMessagesAsRead();
-    }
-  }, [user?.id, otherUser?.id]);
+    const fetchUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) console.error("❌ Auth error:", error);
+      else setUser(data?.user);
+    };
+    fetchUser();
+  }, []);
 
-  // 🧩 Helper: decrypt or fallback to plaintext
-  const getMessageText = async (msg) => {
-    if (msg.is_encrypted && msg.content_encrypted && sharedKey) {
-      try {
-        const decrypted = await decryptWithKey(sharedKey, msg.content_encrypted, msg.iv);
-        return decrypted;
-      } catch (err) {
-        console.error("❌ Failed to decrypt:", err);
-        return "[Encrypted message]";
-      }
-    }
-    return msg.content_text || msg.content || "[No content]";
-  };
+  // 🔹 Load all other users for selection
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .neq("id", user.id); // exclude self
+      if (error) console.error("❌ Profiles fetch error:", error);
+      else setProfiles(data || []);
+    };
+    fetchProfiles();
+  }, [user]);
+
+  // 🔹 Reset otherUser if user logs out
+  useEffect(() => {
+    if (!user) setOtherUser(null);
+  }, [user]);
+
+  if (!user) {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Loading user info...
+      </div>
+    );
+  }
+
+  if (!otherUser) {
+    return (
+      <div className="p-8 max-w-md mx-auto text-center">
+        <h2 className="text-xl font-semibold mb-4">Select a user to chat with</h2>
+        {profiles.length === 0 && (
+          <p className="text-gray-500">No other users found.</p>
+        )}
+        <ul>
+          {profiles.map((p) => (
+            <li key={p.id} className="mb-2">
+              <button
+                onClick={() => setOtherUser(p)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+              >
+                {p.email}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-2 overflow-y-auto max-h-[70vh] p-2">
-      {messages.length === 0 ? (
-        <div className="text-gray-400 text-center py-8">No messages yet...</div>
-      ) : (
-        messages.map((msg) => (
-          <MessageBubble
-            key={msg.id}
-            msg={msg}
-            isOwn={msg.sender_id === user.id}
-            getMessageText={getMessageText}
-          />
-        ))
-      )}
-    </div>
-  );
-}
+    <div className="flex flex-col h-screen max-w-2xl mx-auto border border-gray-300 rounded-lg shadow">
+      {/* Header */}
+      <div className="p-4 border-b bg-gray-100 font-semibold flex justify-between items-center">
+        <span>Chat with {otherUser.email}</span>
+        <button
+          onClick={() => setOtherUser(null)}
+          className="text-sm text-gray-500 hover:text-red-500"
+        >
+          ← Change User
+        </button>
+      </div>
 
-function MessageBubble({ msg, isOwn, getMessageText }) {
-  const [text, setText] = React.useState("");
-
-  useEffect(() => {
-    (async () => {
-      const t = await getMessageText(msg);
-      setText(t);
-    })();
-  }, [msg]);
-
-  return (
-    <div
-      className={`flex ${
-        isOwn ? "justify-end" : "justify-start"
-      }`}
-    >
-      <div
-        className={`px-4 py-2 rounded-2xl shadow text-sm max-w-[70%] break-words ${
-          isOwn
-            ? "bg-blue-600 text-white rounded-br-none"
-            : "bg-gray-200 text-gray-800 rounded-bl-none"
-        }`}
-      >
-        <div>{text}</div>
-        <div className="text-[10px] opacity-70 mt-1 text-right">
-          {new Date(msg.created_at).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </div>
+      {/* Chat Window */}
+      <div className="flex-1 overflow-y-auto">
+        <ChatWindow
+          senderId={user.id}
+          recipientId={otherUser.id}
+          sharedKey="your_shared_key_here" // replace with actual key if using encryption
+        />
       </div>
     </div>
   );

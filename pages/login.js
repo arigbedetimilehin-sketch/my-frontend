@@ -9,19 +9,31 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // 🔹 Check if user is already logged in
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        router.push("/"); // Already logged in
+        router.push("/dashboard"); // redirect to dashboard if logged in
       }
     };
     checkSession();
   }, [router]);
 
+  // 🔹 Handle login
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    // 🔍 Debug log to ensure fields are filled
+    console.log("🔍 Email:", email);
+    console.log("🔍 Password:", password ? "••••••••" : "(empty)");
+
+    if (!email || !password) {
+      alert("⚠️ Please fill in both email and password.");
+      setLoading(false);
+      return;
+    }
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -29,13 +41,15 @@ export default function LoginPage() {
     });
 
     if (error) {
+      console.error("❌ Supabase login error:", error);
       alert("❌ Login failed: " + error.message);
       setLoading(false);
       return;
     }
 
+    console.log("✅ Login success:", data);
     alert("✅ Login successful!");
-    router.push("/");
+    router.push("/dashboard"); // redirect to chat dashboard after login
   };
 
   return (
