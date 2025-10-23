@@ -1,8 +1,9 @@
+// pages/index.js
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../supabaseClient";
 import Link from "next/link";
-import ChatComponent from "../components/Chat";
+import ChatComponent from "./components/Chat";
 import Head from "next/head";
 
 export default function Home() {
@@ -16,7 +17,7 @@ export default function Home() {
     };
     getSession();
 
-    // 🔍 Test Supabase connection (for debugging)
+    // 🔍 Supabase connection test
     supabase
       .from("profiles")
       .select("*")
@@ -91,7 +92,7 @@ export default function Home() {
           <span className="font-semibold text-pink-300">{user.email}</span>
         </p>
 
-        {/* Features Section */}
+        {/* Features */}
         <h2 className="text-2xl font-semibold mb-6 border-b border-white/30 pb-2">
           Features
         </h2>
