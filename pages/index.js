@@ -16,7 +16,7 @@ export default function Home() {
     };
     getSession();
 
-    // 🔍 Test connection
+    // 🔍 Test Supabase connection (for debugging)
     supabase
       .from("profiles")
       .select("*")
@@ -41,14 +41,17 @@ export default function Home() {
         <Head>
           <title>EchoSignal Cloud</title>
         </Head>
-        <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-blue-600 to-purple-800 text-white">
-          <h1 className="text-5xl font-bold mb-4">Tailwind is working! 🚀</h1>
+
+        <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 text-white text-center">
+          <h1 className="text-5xl font-extrabold mb-4 drop-shadow-lg">
+            EchoSignal Cloud 🚀
+          </h1>
           <p className="text-lg">
-            <Link href="/login" className="underline hover:text-gray-200">
+            <Link href="/login" className="underline hover:text-indigo-300">
               Login
             </Link>{" "}
             |{" "}
-            <Link href="/signup" className="underline hover:text-gray-200">
+            <Link href="/signup" className="underline hover:text-pink-300">
               Sign Up
             </Link>
           </p>
@@ -68,40 +71,56 @@ export default function Home() {
         <meta charSet="UTF-8" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-800 text-white p-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-800 to-indigo-900 text-white p-8">
+        {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold">EchoSignal Cloud</h1>
+          <h1 className="text-4xl font-bold drop-shadow-lg">
+            🌌 EchoSignal Cloud
+          </h1>
           <button
             onClick={handleLogout}
-            className="px-4 py-2 bg-red-500 rounded-lg hover:bg-red-600 transition"
+            className="px-4 py-2 bg-pink-600 hover:bg-pink-700 rounded-lg transition transform hover:scale-105 shadow-lg"
           >
             Logout
           </button>
         </div>
 
-        <p className="mb-6">Welcome, {user.email}</p>
+        {/* Welcome */}
+        <p className="mb-6 text-lg font-light">
+          Welcome back,{" "}
+          <span className="font-semibold text-pink-300">{user.email}</span>
+        </p>
 
-        <h2 className="text-2xl font-semibold mb-4">Features</h2>
-        <ul className="space-y-2 mb-8">
-          <li>
-            <Link href="/deadman" className="hover:underline">
-              Deadman Fingers
-            </Link>
-          </li>
-          <li>
-            <Link href="/panic" className="hover:underline">
-              Panic Button
-            </Link>
-          </li>
-          <li>
-            <Link href="/trust-contacts" className="hover:underline">
-              Trusted Contacts
-            </Link>
-          </li>
-        </ul>
+        {/* Features Section */}
+        <h2 className="text-2xl font-semibold mb-6 border-b border-white/30 pb-2">
+          Features
+        </h2>
 
-        {/* Chat under Deadman Finger */}
-        <div className="bg-white text-black p-4 rounded-lg shadow-lg">
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
+          <Link
+            href="/deadman"
+            className="p-6 bg-white/10 rounded-2xl hover:bg-white/20 transition backdrop-blur-lg shadow-lg"
+          >
+            🕒 Deadman Fingers
+          </Link>
+
+          <Link
+            href="/panic"
+            className="p-6 bg-white/10 rounded-2xl hover:bg-white/20 transition backdrop-blur-lg shadow-lg"
+          >
+            🚨 Panic Button
+          </Link>
+
+          <Link
+            href="/trust-contacts"
+            className="p-6 bg-white/10 rounded-2xl hover:bg-white/20 transition backdrop-blur-lg shadow-lg"
+          >
+            🤝 Trusted Contacts
+          </Link>
+        </div>
+
+        {/* Chat Section */}
+        <div className="bg-white/10 p-6 rounded-2xl backdrop-blur-lg shadow-xl">
           <ChatComponent user={user} />
         </div>
       </div>
