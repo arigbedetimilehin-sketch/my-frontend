@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../supabaseClient";
-import ChatMessage from "./ChatMessage";
+import ChatMessage from "./ChatMessages";
 import ChatMessageInput from "./ChatMessageInput";
 
 export default function ChatWindow({ senderId, recipientId, sharedKey }) {
