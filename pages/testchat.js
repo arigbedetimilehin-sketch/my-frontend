@@ -1,6 +1,5 @@
-import ChatMessageInput from "./components/Chat/ChatMessageInput";
-import MessageList from "./components/Chat/MessageList";
-
+import ChatMessageInput from "../components/chat/ChatMessageInput.js";
+import MessageList from "../components/chat/MessageList.js";
 export default function TestChat() {
   const senderId = "be14f71d-ef85-40ea-8eaa-ce2b996e2842"; 
   const recipientId = "0af6a5b3-fde3-4612-a7dd-b77526bba9cd";

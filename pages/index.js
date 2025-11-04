@@ -2,19 +2,20 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../supabaseClient";
 import Link from "next/link";
-import Chat from "./components/chat/chat";
-import Head from "next/head";
-
+import Chat from "../components/chat/chat.js";
+import MessageList from "../components/chat/MessageList.js";
+import ChatMessageInput from "../components/chat/ChatMessageInput.js";
+import Head from "next/head"
 export default function Home() {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // new: loading state
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
       setUser(data.session?.user ?? null);
-      setLoading(false); // done loading
+      setLoading(false);
     };
     getSession();
 
@@ -128,7 +129,7 @@ export default function Home() {
 
         {/* Chat Section */}
         <div className="bg-white/10 p-6 rounded-2xl backdrop-blur-lg shadow-xl">
-          <ChatComponent user={user} />
+          <Chat user={user} />
         </div>
       </div>
     </>
