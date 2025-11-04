@@ -1,112 +1,66 @@
-// components/Chat/useChat.js
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
-export default function useDirectChat(sender, receiverId) {
+export default function useChat(senderId, recipientId) {
   const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
 
-  // 🟢 Load all messages between sender and receiver
   useEffect(() => {
-    if (!sender?.id || !receiverId) return;
+    if (!senderId || !recipientId) return;
 
     const loadMessages = async () => {
-      setLoading(true);
       const { data, error } = await supabase
         .from("messages")
         .select("*")
         .or(
-          `and(sender_id.eq.${sender.id},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${sender.id})`
+          `and(sender_id.eq.${senderId},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${senderId})`
         )
         .order("created_at", { ascending: true });
 
-      if (error) {
-        console.error("❌ Load messages error:", error);
-      } else {
-        setMessages(data || []);
-      }
-      setLoading(false);
+      if (error) console.error("Load messages error:", error);
+      if (data) setMessages(data);
     };
 
     loadMessages();
 
-    // 🟢 Subscribe to real-time inserts
-    const channel = supabase
-      .channel("messages-realtime")
+    const subscription = supabase
+      .channel("message_updates")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
-          const m = payload.new;
+          const newMessage = payload.new;
           if (
-            (m.sender_id === sender.id && m.receiver_id === receiverId) ||
-            (m.sender_id === receiverId && m.receiver_id === sender.id)
+            (newMessage.sender_id === senderId &&
+              newMessage.recipient_id === recipientId) ||
+            (newMessage.sender_id === recipientId &&
+              newMessage.recipient_id === senderId)
           ) {
-            setMessages((prev) => [...prev, m]);
+            setMessages((prev) => [...prev, newMessage]);
           }
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(subscription);
     };
-  }, [sender?.id, receiverId]);
+  }, [senderId, recipientId]);
 
-  // 🟣 Send a message
-  const sendMessage = async (messageText) => {
-    if (!sender?.id || !receiverId) {
-      console.warn("⚠️ Sender or receiver missing");
-      return;
-    }
+  const sendMessage = async (content) => {
+    if (!content.trim()) return;
 
-    const content =
-      typeof messageText === "string" ? messageText.trim() : "";
-
-    if (!content) {
-      console.warn("⚠️ Empty message, not sending");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("messages")
-      .insert([
-        {
-          sender_id: sender.id,
-          receiver_id: receiverId,
-          content,
-          is_read: false,
-          created_at: new Date().toISOString(),
-        },
-      ])
-      .select();
+    const { error } = await supabase.from("messages").insert([
+      {
+        sender_id: senderId,
+        recipient_id: recipientId,
+        content,
+      },
+    ]);
 
     if (error) {
-      console.error("❌ Send message error:", error);
-    } else if (data?.length) {
-      // Show message immediately on sender's side
-      setMessages((prev) => [...prev, data[0]]);
+      console.error("Send message error:", error);
     }
   };
 
-  // 🟡 Mark all unread messages as read when opening chat
-  const markMessagesAsRead = async () => {
-    if (!sender?.id || !receiverId) return;
-
-    const { error } = await supabase
-      .from("messages")
-      .update({ is_read: true })
-      .eq("receiver_id", sender.id)
-      .eq("sender_id", receiverId)
-      .eq("is_read", false);
-
-    if (error) console.error("❌ Mark read error:", error);
-  };
-
-  return {
-    messages,
-    loading,
-    sendMessage,
-    markMessagesAsRead,
-  };
+  return { messages, sendMessage };
 }

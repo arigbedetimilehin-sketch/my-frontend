@@ -1,45 +1,59 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient"; // ✅ correct path if supabaseClient.js is in root/frontend
+import { supabase } from "../../supabaseClient";
 
 export default function ChatPage() {
   const [user, setUser] = useState(null);
-  const [receiver, setReceiver] = useState(null);
+  const [recipient, setRecipient] = useState(null);
+  const [search, setSearch] = useState("");
+  const [userList, setUserList] = useState([]);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
 
-  // ✅ Load current user and set a receiver manually for now
+  // ✅ Load current user
   useEffect(() => {
     async function loadUser() {
       const { data, error } = await supabase.auth.getUser();
       if (error) console.error("Auth error:", error);
-      if (data?.user) {
-        setUser(data.user);
-
-        // ⚠️ Example: hardcode or fetch another user as receiver
-        setReceiver({ id: "b1c2d3e4-fake-user-id", name: "EchoSignal AI" });
-      }
+      if (data?.user) setUser(data.user);
     }
     loadUser();
   }, []);
 
-  // ✅ Load messages between sender & receiver
+  // ✅ Search for other users
   useEffect(() => {
-    if (!user?.id || !receiver?.id) return;
+    if (search.trim().length === 0) {
+      setUserList([]);
+      return;
+    }
+
+    const loadUsers = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, email, username")
+        .ilike("email", `%${search}%`);
+
+      if (error) console.error("Search error:", error);
+      else setUserList(data.filter((u) => u.id !== user?.id));
+    };
+
+    loadUsers();
+  }, [search]);
+
+  // ✅ Load messages once recipient is set
+  useEffect(() => {
+    if (!user?.id || !recipient?.id) return;
 
     async function loadMessages() {
       const { data, error } = await supabase
         .from("messages")
-        .select("id, sender_id, receiver_id, content, created_at")
+        .select("id, sender_id, recipient_id, content, created_at")
         .or(
-          `and(sender_id.eq.${user.id},receiver_id.eq.${receiver.id}),and(sender_id.eq.${receiver.id},receiver_id.eq.${user.id})`
+          `and(sender_id.eq.${user.id},recipient_id.eq.${recipient.id}),and(sender_id.eq.${recipient.id},recipient_id.eq.${user.id})`
         )
         .order("created_at", { ascending: true });
 
-      if (error) {
-        console.error("❌ Load error:", error);
-      } else {
-        setMessages(data);
-      }
+      if (error) console.error("Load error:", error);
+      else setMessages(data);
     }
 
     loadMessages();
@@ -51,90 +65,113 @@ export default function ChatPage() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
-          const newMsg = payload.new;
+          const msg = payload.new;
           if (
-            (newMsg.sender_id === user.id &&
-              newMsg.receiver_id === receiver.id) ||
-            (newMsg.sender_id === receiver.id &&
-              newMsg.receiver_id === user.id)
+            (msg.sender_id === user.id && msg.recipient_id === recipient.id) ||
+            (msg.sender_id === recipient.id && msg.recipient_id === user.id)
           ) {
-            setMessages((prev) => [...prev, newMsg]);
+            setMessages((prev) => [...prev, msg]);
           }
         }
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, receiver]);
+    return () => supabase.removeChannel(channel);
+  }, [user, recipient]);
 
   // ✅ Send message
   const sendMessage = async () => {
-    if (!newMessage.trim()) return;
-    if (!user?.id || !receiver?.id) {
-      console.error("❌ Sender or receiver not set");
-      return;
-    }
+    if (!newMessage.trim() || !user?.id || !recipient?.id) return;
 
     const { error } = await supabase.from("messages").insert([
       {
         sender_id: user.id,
-        receiver_id: receiver.id,
+        recipient_id: recipient.id,
         content: newMessage.trim(),
       },
     ]);
 
-    if (error) {
-      console.error("❌ Send error:", error);
-    } else {
-      setNewMessage("");
-    }
+    if (error) console.error("Send error:", error);
+    else setNewMessage("");
   };
 
-  if (!user || !receiver)
-    return <p className="p-4 text-gray-500">Loading chat...</p>;
-
   return (
-    <div className="max-w-xl mx-auto p-4 bg-white rounded-lg shadow">
-      <h2 className="font-semibold text-xl mb-3">
-        Chat with {receiver.name}
-      </h2>
+    <div className="max-w-xl mx-auto p-4 bg-white rounded-lg shadow text-black">
+      {!recipient ? (
+        <>
+          <h2 className="font-semibold text-xl mb-3">Search for a user</h2>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Enter email or username"
+            className="w-full p-2 border rounded mb-4"
+          />
 
-      <div className="h-96 overflow-y-auto border p-3 mb-3 rounded">
-        {messages.length === 0 ? (
-          <p className="text-gray-500 text-center">No messages yet.</p>
-        ) : (
-          messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`p-2 my-1 rounded-lg ${
-                msg.sender_id === user.id
-                  ? "bg-blue-600 text-white text-right"
-                  : "bg-gray-200 text-black text-left"
-              }`}
+          {userList.length === 0 && search.length > 0 && (
+            <p className="text-gray-500 text-center">No users found</p>
+          )}
+
+          <ul>
+            {userList.map((u) => (
+              <li
+                key={u.id}
+                className="p-2 border-b cursor-pointer hover:bg-gray-100 rounded"
+                onClick={() => setRecipient(u)}
+              >
+                {u.username || u.email}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <>
+          <h2 className="font-semibold text-xl mb-3">
+            Chat with {recipient.username || recipient.email}
+          </h2>
+          <div className="h-96 overflow-y-auto border p-3 mb-3 rounded">
+            {messages.length === 0 ? (
+              <p className="text-gray-500 text-center">No messages yet.</p>
+            ) : (
+              messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`p-2 my-1 rounded-lg ${
+                    msg.sender_id === user.id
+                      ? "bg-blue-600 text-white text-right"
+                      : "bg-gray-200 text-black text-left"
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Type a message..."
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              className="flex-1 border p-2 rounded"
+            />
+            <button
+              onClick={sendMessage}
+              className="bg-blue-600 text-white px-4 rounded hover:bg-blue-700 transition"
             >
-              {msg.content}
-            </div>
-          ))
-        )}
-      </div>
+              Send
+            </button>
+          </div>
 
-      <div className="flex gap-2">
-        <input
-          type="text"
-          placeholder="Type a message..."
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          className="flex-1 border p-2 rounded text-black"
-        />
-        <button
-          onClick={sendMessage}
-          className="bg-blue-600 text-white px-4 rounded hover:bg-blue-700 transition"
-        >
-          Send
-        </button>
-      </div>
+          <button
+            onClick={() => setRecipient(null)}
+            className="mt-4 text-sm text-blue-500 hover:underline"
+          >
+            🔙 Back to user search
+          </button>
+        </>
+      )}
     </div>
   );
 }

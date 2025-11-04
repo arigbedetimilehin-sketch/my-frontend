@@ -4,7 +4,7 @@ import { supabase } from "../../supabaseClient";
 // 🧩 AES Encryption / Decryption Helpers
 async function generateKey(sharedKey) {
   const encoder = new TextEncoder();
-  const keyData = encoder.encode(sharedKey.padEnd(32, "0")); // 256-bit key
+  const keyData = encoder.encode(sharedKey.padEnd(32, "0"));
   return await crypto.subtle.importKey("raw", keyData, "AES-GCM", false, [
     "encrypt",
     "decrypt",
@@ -37,7 +37,7 @@ async function decryptWithKey(sharedKey, encryptedText) {
   }
 }
 
-export default function ChatMessages({ user, receiver, sharedKey }) {
+export default function ChatMessages({ user, recipient, sharedKey }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -45,15 +45,15 @@ export default function ChatMessages({ user, receiver, sharedKey }) {
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 
-  // 🔹 Load messages from Supabase
+  // Load messages
   const loadMessages = async () => {
-    if (!user?.id || !receiver?.id) return;
+    if (!user?.id || !recipient?.id) return;
 
     const { data, error } = await supabase
       .from("messages")
       .select("*")
       .or(
-        `and(sender_id.eq.${user.id},recipient_id.eq.${receiver.id}),and(sender_id.eq.${receiver.id},recipient_id.eq.${user.id})`
+        `and(sender_id.eq.${user.id},recipient_id.eq.${recipient.id}),and(sender_id.eq.${recipient.id},recipient_id.eq.${user.id})`
       )
       .order("created_at", { ascending: true });
 
@@ -61,8 +61,6 @@ export default function ChatMessages({ user, receiver, sharedKey }) {
       console.error("❌ Load messages error:", error);
       return;
     }
-
-    console.log("✅ Messages fetched:", data);
 
     const decrypted = await Promise.all(
       data.map(async (msg) => ({
@@ -75,9 +73,13 @@ export default function ChatMessages({ user, receiver, sharedKey }) {
     scrollToBottom();
   };
 
-  // 🔹 Real-time updates
   useEffect(() => {
-    if (!user?.id || !receiver?.id) return;
+    loadMessages();
+  }, [user?.id, recipient?.id, sharedKey]);
+
+  // Real-time live updates
+  useEffect(() => {
+    if (!user?.id || !recipient?.id) return;
 
     const channel = supabase
       .channel("encrypted-chat")
@@ -87,8 +89,8 @@ export default function ChatMessages({ user, receiver, sharedKey }) {
         async (payload) => {
           const msg = payload.new;
           if (
-            (msg.sender_id === user.id && msg.recipient_id === receiver.id) ||
-            (msg.sender_id === receiver.id && msg.recipient_id === user.id)
+            (msg.sender_id === user.id && msg.recipient_id === recipient.id) ||
+            (msg.sender_id === recipient.id && msg.recipient_id === user.id)
           ) {
             msg.content = await decryptWithKey(sharedKey, msg.content);
             setMessages((prev) => [...prev, msg]);
@@ -98,26 +100,25 @@ export default function ChatMessages({ user, receiver, sharedKey }) {
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, receiver?.id, sharedKey]);
+    return () => supabase.removeChannel(channel);
+  }, [user?.id, recipient?.id, sharedKey]);
 
-  // 🔹 Send encrypted message
+  // Send encrypted message
   const sendMessage = async () => {
     if (!text.trim()) return;
-    if (!user?.id || !receiver?.id) {
-      console.error("❌ Sender or receiver not set", { user, receiver });
+    if (!user?.id || !recipient?.id) {
+      console.error("❌ Sender or recipient not set", { user, recipient });
       return;
     }
 
     setSending(true);
+
     const encryptedContent = await encryptWithKey(sharedKey, text.trim());
 
     const { error } = await supabase.from("messages").insert([
       {
         sender_id: user.id,
-        recipient_id: receiver.id,
+        recipient_id: recipient.id,
         content: encryptedContent,
         created_at: new Date().toISOString(),
       },
@@ -130,13 +131,9 @@ export default function ChatMessages({ user, receiver, sharedKey }) {
     scrollToBottom();
   };
 
-  useEffect(() => {
-    loadMessages();
-  }, [user?.id, receiver?.id, sharedKey]);
-
   return (
     <div className="flex flex-col h-full">
-      {/* Messages Display */}
+      {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-3 bg-white border rounded-lg shadow-sm">
         {messages.length === 0 ? (
           <p className="text-gray-500 text-center mt-4">No messages yet.</p>
@@ -157,7 +154,7 @@ export default function ChatMessages({ user, receiver, sharedKey }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Field */}
+      {/* Input Bar */}
       <div className="mt-3 flex">
         <input
           type="text"

@@ -1,19 +1,20 @@
-// pages/index.js
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../supabaseClient";
 import Link from "next/link";
-import ChatComponent from "./components/Chat";
+import ChatComponent from "../components/chat/chat";
 import Head from "next/head";
 
 export default function Home() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // new: loading state
   const router = useRouter();
 
   useEffect(() => {
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
       setUser(data.session?.user ?? null);
+      setLoading(false); // done loading
     };
     getSession();
 
@@ -36,13 +37,20 @@ export default function Home() {
     router.push("/login");
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen text-white bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600">
+        <p className="text-2xl font-semibold">Loading...</p>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <>
         <Head>
           <title>EchoSignal Cloud</title>
         </Head>
-
         <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 text-white text-center">
           <h1 className="text-5xl font-extrabold mb-4 drop-shadow-lg">
             EchoSignal Cloud 🚀
@@ -75,9 +83,7 @@ export default function Home() {
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-800 to-indigo-900 text-white p-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold drop-shadow-lg">
-            🌌 EchoSignal Cloud
-          </h1>
+          <h1 className="text-4xl font-bold drop-shadow-lg">🌌 EchoSignal Cloud</h1>
           <button
             onClick={handleLogout}
             className="px-4 py-2 bg-pink-600 hover:bg-pink-700 rounded-lg transition transform hover:scale-105 shadow-lg"
@@ -100,21 +106,21 @@ export default function Home() {
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <Link
             href="/deadman"
-            className="p-6 bg-white/10 rounded-2xl hover:bg-white/20 transition backdrop-blur-lg shadow-lg"
+            className="p-6 bg-white/10 rounded-2xl hover:bg-white/20 transition backdrop-blur-lg shadow-lg flex justify-center items-center text-xl font-medium"
           >
             🕒 Deadman Fingers
           </Link>
 
           <Link
             href="/panic"
-            className="p-6 bg-white/10 rounded-2xl hover:bg-white/20 transition backdrop-blur-lg shadow-lg"
+            className="p-6 bg-white/10 rounded-2xl hover:bg-white/20 transition backdrop-blur-lg shadow-lg flex justify-center items-center text-xl font-medium"
           >
             🚨 Panic Button
           </Link>
 
           <Link
             href="/trust-contacts"
-            className="p-6 bg-white/10 rounded-2xl hover:bg-white/20 transition backdrop-blur-lg shadow-lg"
+            className="p-6 bg-white/10 rounded-2xl hover:bg-white/20 transition backdrop-blur-lg shadow-lg flex justify-center items-center text-xl font-medium"
           >
             🤝 Trusted Contacts
           </Link>

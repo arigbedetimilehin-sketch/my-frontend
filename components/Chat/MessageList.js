@@ -1,42 +1,46 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../../supabaseClient";
 
-export default function MessageList({ sender, receiver }) {
+export default function MessageList({ senderId, recipientId }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef(null);
 
-  // 🧠 Scroll to bottom whenever messages change
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // 🔹 Fetch existing messages
   useEffect(() => {
     async function fetchMessages() {
       setLoading(true);
+
       const { data, error } = await supabase
         .from("messages")
         .select("*")
         .or(
-          `and(sender.eq.${sender},receiver.eq.${receiver}),and(sender.eq.${receiver},receiver.eq.${sender})`
+          `and(sender_id.eq.${senderId},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${senderId})`
         )
         .order("created_at", { ascending: true });
 
       if (error) {
-        console.error("❌ Failed to load messages:", error.message);
+        console.error("Load error:", error);
       } else {
         setMessages(data || []);
+        scrollToBottom();
       }
+
       setLoading(false);
-      scrollToBottom();
     }
 
-    fetchMessages();
-  }, [sender, receiver]);
+    if (senderId && recipientId) {
+      fetchMessages();
+    }
+  }, [senderId, recipientId]);
 
-  // 🔹 Listen for new real-time messages
+  // Realtime subscription
   useEffect(() => {
+    if (!senderId || !recipientId) return;
+
     const channel = supabase
       .channel("realtime:messages")
       .on(
@@ -44,10 +48,11 @@ export default function MessageList({ sender, receiver }) {
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
           const newMsg = payload.new;
-          // Only include messages for this specific chat
           if (
-            (newMsg.sender === sender && newMsg.receiver === receiver) ||
-            (newMsg.sender === receiver && newMsg.receiver === sender)
+            (newMsg.sender_id === senderId &&
+              newMsg.recipient_id === recipientId) ||
+            (newMsg.sender_id === recipientId &&
+              newMsg.recipient_id === senderId)
           ) {
             setMessages((prev) => [...prev, newMsg]);
             scrollToBottom();
@@ -59,25 +64,28 @@ export default function MessageList({ sender, receiver }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [sender, receiver]);
+  }, [senderId, recipientId]);
 
-  // 🔹 Mark messages as read when viewing
+  // Mark messages as read
   useEffect(() => {
     async function markAsRead() {
       await supabase
         .from("messages")
         .update({ is_read: true })
-        .eq("receiver", sender)
-        .eq("sender", receiver)
+        .eq("recipient_id", senderId)
+        .eq("sender_id", recipientId)
         .eq("is_read", false);
     }
-    markAsRead();
-  }, [sender, receiver]);
+
+    if (senderId && recipientId) {
+      markAsRead();
+    }
+  }, [senderId, recipientId]);
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-2">
       {loading ? (
-        <div className="text-gray-500 text-center">Loading messages...</div>
+        <div className="text-gray-500 text-center">Loading...</div>
       ) : messages.length === 0 ? (
         <div className="text-gray-400 text-center">No messages yet</div>
       ) : (
@@ -85,12 +93,12 @@ export default function MessageList({ sender, receiver }) {
           <div
             key={msg.id}
             className={`flex ${
-              msg.sender === sender ? "justify-end" : "justify-start"
+              msg.sender_id === senderId ? "justify-end" : "justify-start"
             }`}
           >
             <div
               className={`max-w-xs px-4 py-2 rounded-2xl text-sm ${
-                msg.sender === sender
+                msg.sender_id === senderId
                   ? "bg-indigo-600 text-white"
                   : "bg-gray-200 text-gray-800"
               }`}

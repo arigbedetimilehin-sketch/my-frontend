@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { supabase } from "../../supabaseClient";
 
-export default function ChatMessageInput({ senderId, recipientId, onMessageSent }) {
+export default function ChatMessageInput({ senderId, recipientId, onSend }) {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!message.trim()) return;
+    if (!message.trim() || !recipientId) {
+      console.warn("Missing message or recipient");
+      return;
+    }
 
     setSending(true);
 
@@ -16,38 +19,55 @@ export default function ChatMessageInput({ senderId, recipientId, onMessageSent 
       .insert([
         {
           sender_id: senderId,
-          recipient_id: recipientId, // ✅ uses correct column
+          recipient_id: recipientId,
           content: message,
         },
       ])
-      .select();
+      .select("*");
 
     setSending(false);
 
     if (error) {
-      console.error("❌ Send message error:", error);
-      alert("Message failed to send: " + error.message);
-    } else {
-      console.log("✅ Message sent:", data);
-      setMessage("");
-      if (onMessageSent) onMessageSent(data[0]);
+      console.error("Send error:", error);
+      return;
     }
+
+    if (onSend) {
+      onSend(data[0]);
+    }
+
+    setMessage("");
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 p-2 border-t">
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: "flex", gap: "8px", padding: "10px" }}
+    >
       <input
         type="text"
-        placeholder="Type your message..."
-        className="flex-grow border rounded-lg p-2 text-black"
+        placeholder="Type a message..."
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        disabled={sending}
+        style={{
+          flex: 1,
+          padding: "10px",
+          borderRadius: "8px",
+          border: "1px solid #ccc",
+        }}
       />
+
       <button
         type="submit"
-        className="bg-blue-500 text-white rounded-lg px-4 py-2"
         disabled={sending}
+        style={{
+          backgroundColor: sending ? "#6c757d" : "#007bff",
+          color: "white",
+          padding: "10px 16px",
+          border: "none",
+          borderRadius: "8px",
+          cursor: sending ? "not-allowed" : "pointer",
+        }}
       >
         {sending ? "Sending..." : "Send"}
       </button>
