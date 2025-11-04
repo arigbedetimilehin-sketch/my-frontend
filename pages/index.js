@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../supabaseClient";
 import Link from "next/link";
-import Chat from './components/chat/Chat';
-import MessageList from "../components/chat/MessageList.js";
-import ChatMessageInput from "../components/chat/ChatMessageInput.js";
-import Head from "next/head"
+import Head from "next/head";
+
+// ✅ Fixed import paths and casing (matches your folder: components/chat)
+import Chat from "../components/chat/chat";
+import MessageList from "../components/chat/MessageList";
+import ChatMessageInput from "../components/chat/ChatMessageInput";
+
 export default function Home() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,7 +22,7 @@ export default function Home() {
     };
     getSession();
 
-    // 🔍 Supabase connection test
+    // ✅ Supabase connection test
     supabase
       .from("profiles")
       .select("*")
