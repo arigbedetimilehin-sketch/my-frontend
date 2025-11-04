@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../supabaseClient";
 import Link from "next/link";
-import Chat from "../components/chat/chat.js";
+import Chat from './components/chat/Chat';
 import MessageList from "../components/chat/MessageList.js";
 import ChatMessageInput from "../components/chat/ChatMessageInput.js";
 import Head from "next/head"
