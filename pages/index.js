@@ -4,7 +4,7 @@ import { supabase } from "../supabaseClient";
 import Link from "next/link";
 import Head from "next/head";
 
-// ✅ Fixed import paths and casing (matches your folder: components/chat)
+// ✅ Exact folder + file names from your screenshot
 import Chat from "../components/chat/chat";
 import MessageList from "../components/chat/MessageList";
 import ChatMessageInput from "../components/chat/ChatMessageInput";
@@ -22,7 +22,7 @@ export default function Home() {
     };
     getSession();
 
-    // ✅ Supabase connection test
+    // Optional: quick Supabase connection test
     supabase
       .from("profiles")
       .select("*")
@@ -81,7 +81,6 @@ export default function Home() {
           name="description"
           content="Secure messaging and safety features by Flameborn."
         />
-        <meta charSet="UTF-8" />
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-800 to-indigo-900 text-white p-8">
